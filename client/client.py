@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 import serial
+from http.server import BaseHTTPRequestHandler, HTTPServer
+import time
 
 ser = serial.Serial(
         # port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
@@ -11,11 +13,17 @@ ser = serial.Serial(
         timeout=2
 )
 
-while True:
-    samples_bytes = ser.readline()
-    if samples_bytes[:2] != b'd:':
-        continue
-    samples_bytes = samples_bytes[2:]
-    samples_bytes_list = samples_bytes.split(b',')
-    samples = map(int, samples_bytes_list)
-    print(list(samples))
+f = open('control.csv', 'w')
+
+num = 0
+while num < 6:
+    serial_input = ser.readline()
+    if serial_input[:2] == b'd:':
+        num += 1
+        samples_bytes = str(serial_input[2:])[2:-5]
+        samples = list(samples_bytes.split(','))
+        f.write(str(samples_bytes) + '\n')
+    else:
+        print(serial_input)
+
+f.close()

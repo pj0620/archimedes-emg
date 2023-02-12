@@ -5,9 +5,13 @@
 
 #define ADC_PIN 34
 
-#define SAMPLE_RATE 1000
-#define SAMPLE_SIZE 150
+#define USE_WEB_MONITOR true
+#define SAMPLE_RATE 6000
+#define SAMPLE_SIZE 1000
 const float samplePeriod = 1000.0/SAMPLE_RATE;
+
+#define CALIBRATE_PIN 0
+bool inCalibrationMode = false;
 
 WebSocketsServer webSocket = WebSocketsServer(81);
 const char *SSID = "NETGEAR02";
@@ -18,7 +22,9 @@ AsyncWebServer server(80);
 
 int readADC(){ return analogRead(ADC_PIN); }
 
-void updateGraph(int adcValue, int idx) {
+void updateWebMonitor(int adcValue, int idx) {
+  if (!USE_WEB_MONITOR) { return; }
+  
   String ADCVal = String(adcValue).c_str();
 
   myString[0] = ADCVal;
@@ -36,7 +42,7 @@ void buildSample() {
   for (int i=0; i < SAMPLE_SIZE; i++) {
     delay(samplePeriod);
     adcValue = readADC();
-    updateGraph(adcValue, i);
+    updateWebMonitor(adcValue, i);
     Serial.print(adcValue);
     if (i != SAMPLE_SIZE - 1) {
       Serial.print(',');  
@@ -49,30 +55,34 @@ void setup()
 {
   Serial.begin(115200);
 
-  if (!SPIFFS.begin()){
-    Serial.println("An Error has occurred while mounting SPIFFS");
-    return;
+  if (USE_WEB_MONITOR) {
+    if (!SPIFFS.begin()){
+      Serial.println("An Error has occurred while mounting SPIFFS");
+      return;
+    }
+  
+    WiFi.begin(SSID, PASSWORD);
+    while (WiFi.status() != WL_CONNECTED){
+      delay(1000);
+      Serial.println("Connecting to WiFi..");
+    }
+  
+    Serial.println("");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  
+    server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
+              { request->send(SPIFFS, "/index.html"); });
+  
+    server.begin();
+    webSocket.begin();
   }
 
-  WiFi.begin(SSID, PASSWORD);
-  while (WiFi.status() != WL_CONNECTED){
-    delay(1000);
-    Serial.println("Connecting to WiFi..");
-  }
-
-  Serial.println("");
-  Serial.print("IP Address: ");
-  Serial.println(WiFi.localIP());
-
-  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request)
-            { request->send(SPIFFS, "/index.html"); });
-
-  server.begin();
-  webSocket.begin();
+//  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, CHANGE);
 }
 
 void loop(){
-  webSocket.loop();
+  if (USE_WEB_MONITOR) { webSocket.loop(); }
 
   buildSample();
 }
