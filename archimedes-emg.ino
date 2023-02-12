@@ -3,16 +3,16 @@
 #include <ESPAsyncWebServer.h>
 #include <SPIFFS.h>
 
+/*  Sampling */
 #define ADC_PIN 34
-
-#define USE_WEB_MONITOR true
 #define SAMPLE_RATE 6000
-#define SAMPLE_SIZE 1000
+#define SAMPLE_SIZE 100
 const float samplePeriod = 1000.0/SAMPLE_RATE;
+#define DISABLE_SAMPLING_PIN 14
+int adcValue;
 
-#define CALIBRATE_PIN 0
-bool inCalibrationMode = false;
-
+/* Web Monitor */
+#define USE_WEB_MONITOR false
 WebSocketsServer webSocket = WebSocketsServer(81);
 const char *SSID = "NETGEAR02";
 const char *PASSWORD = "3322207797WiffleBall";
@@ -37,18 +37,13 @@ void updateWebMonitor(int adcValue, int idx) {
 }
 
 void buildSample() {
-  Serial.print("d:");
   int adcValue;
   for (int i=0; i < SAMPLE_SIZE; i++) {
     delay(samplePeriod);
     adcValue = readADC();
     updateWebMonitor(adcValue, i);
-    Serial.print(adcValue);
-    if (i != SAMPLE_SIZE - 1) {
-      Serial.print(',');  
-    }
+    Serial.println(adcValue);
   }
-  Serial.println(); 
 }
 
 void setup()
@@ -78,11 +73,15 @@ void setup()
     webSocket.begin();
   }
 
-//  attachInterrupt(digitalPinToInterrupt(interruptPin), blink, CHANGE);
+  pinMode(DISABLE_SAMPLING_PIN, INPUT_PULLUP);
 }
 
 void loop(){
-  if (USE_WEB_MONITOR) { webSocket.loop(); }
-
-  buildSample();
+//  if (USE_WEB_MO NITOR) { webSocket.loop(); }
+//  if (!digitalRead(DISABLE_SAMPLING_PIN)) { buildSample(); }
+  if (digitalRead(DISABLE_SAMPLING_PIN)) { return; }
+//  delay(samplePeriod);
+  adcValue = readADC();
+//  updateWebMonitor(adcValue, i);
+  Serial.println(adcValue);
 }

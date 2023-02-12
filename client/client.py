@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 import serial
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import time
+
+from config.sampling_config import sample_size
 
 ser = serial.Serial(
         # port='/dev/ttyS0', #Replace ttyS0 with ttyAM0 for Pi1,Pi2,Pi0
@@ -13,17 +13,28 @@ ser = serial.Serial(
         timeout=2
 )
 
-f = open('control.csv', 'w')
+write_to_file = False
 
-num = 0
-while num < 6:
+f = open('clench_grabbing_button_short.csv', 'a')
+
+idx = 0
+sample = [0] * sample_size
+num_samples = 0
+while num_samples < 100:
     serial_input = ser.readline()
-    if serial_input[:2] == b'd:':
-        num += 1
-        samples_bytes = str(serial_input[2:])[2:-5]
-        samples = list(samples_bytes.split(','))
-        f.write(str(samples_bytes) + '\n')
-    else:
-        print(serial_input)
+    try:
+        sample_value = int(str(serial_input)[2:-5])
+        sample[idx] = sample_value
+        idx += 1
+    except:
+        print('text: ' + str(serial_input))
+
+    if idx == sample_size-1:
+        print(sample)
+        f.write(','.join(str(s) for s in sample) + '\n')
+        idx = 0
+        sample = [0] * sample_size
+        num_samples += 1
 
 f.close()
+
