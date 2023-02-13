@@ -15,7 +15,7 @@ ser = serial.Serial(
 
 write_to_file = False
 
-f = open('clench_grabbing_button_short.csv', 'a')
+f = open('data_1/clench_grabbing_button_short.csv', 'a')
 
 idx = 0
 sample = [0] * sample_size
